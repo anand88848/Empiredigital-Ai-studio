@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Image, Video, Sparkles, Download, Copy, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Image, Video, Sparkles, Download, Copy, Loader2, AlertCircle, CheckCircle2, Wand2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { SOUL_SIZES } from '@/lib/higgsfield';
 
@@ -40,6 +40,10 @@ export default function HiggsfieldStudio() {
   const [vidLoading, setVidLoading]   = useState(false);
   const [vidResult, setVidResult]     = useState<GenResult | null>(null);
   const [vidError, setVidError]       = useState<string | null>(null);
+
+  // Claude prompt state
+  const [claudeIdea, setClaudeIdea]     = useState('');
+  const [claudeLoading, setClaudeLoading] = useState(false);
 
   async function generateImage() {
     if (!imgPrompt.trim()) return;
@@ -83,6 +87,28 @@ export default function HiggsfieldStudio() {
     }
   }
 
+  async function generatePromptWithClaude() {
+    if (!claudeIdea.trim()) return;
+    setClaudeLoading(true);
+    try {
+      const res = await fetch('/api/higgsfield/suggest-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idea: claudeIdea, type: tab }),
+      });
+      const data = await res.json() as { prompt?: string; error?: string };
+      if (data.prompt) {
+        if (tab === 'image') setImgPrompt(data.prompt);
+        else setVidPrompt(data.prompt);
+        setClaudeIdea('');
+      }
+    } catch {
+      // silently fail — user can still type manually
+    } finally {
+      setClaudeLoading(false);
+    }
+  }
+
   function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text).catch(() => undefined);
   }
@@ -120,6 +146,14 @@ export default function HiggsfieldStudio() {
                 <Sparkles className="w-4 h-4 text-brand-400" />
                 Text → Image (Higgsfield Soul)
               </h2>
+
+              <ClaudePromptBox
+                idea={claudeIdea}
+                loading={claudeLoading}
+                onChange={setClaudeIdea}
+                onGenerate={generatePromptWithClaude}
+                type="image"
+              />
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-gray-400">Prompt</label>
@@ -190,6 +224,14 @@ export default function HiggsfieldStudio() {
                 <Sparkles className="w-4 h-4 text-brand-400" />
                 Image → Video (Higgsfield DoP)
               </h2>
+
+              <ClaudePromptBox
+                idea={claudeIdea}
+                loading={claudeLoading}
+                onChange={setClaudeIdea}
+                onGenerate={generatePromptWithClaude}
+                type="video"
+              />
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-gray-400">Reference Image URL</label>
@@ -299,6 +341,44 @@ export default function HiggsfieldStudio() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ClaudePromptBox({ idea, loading, onChange, onGenerate, type }: {
+  idea: string;
+  loading: boolean;
+  onChange: (v: string) => void;
+  onGenerate: () => void;
+  type: Tab;
+}) {
+  return (
+    <div className="rounded-lg border border-brand-800/50 bg-brand-950/30 p-3 flex flex-col gap-2">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-brand-300">
+        <Wand2 className="w-3.5 h-3.5" />
+        Claude AI — describe your idea
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={idea}
+          onChange={e => onChange(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') onGenerate(); }}
+          placeholder={type === 'image'
+            ? 'e.g. "a fashion model in Tokyo rain at night"'
+            : 'e.g. "slow dramatic zoom into the subject\'s face"'}
+          className="flex-1 rounded-lg bg-surface-muted border border-surface-border px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-brand-600 transition-colors"
+        />
+        <button
+          onClick={onGenerate}
+          disabled={loading || !idea.trim()}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold transition-all whitespace-nowrap"
+        >
+          {loading
+            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Writing…</>
+            : <><Wand2 className="w-3.5 h-3.5" /> Write prompt</>}
+        </button>
+      </div>
+      <p className="text-[10px] text-gray-600">Claude will craft a detailed {type === 'image' ? 'image' : 'motion'} prompt and fill it below automatically.</p>
     </div>
   );
 }
