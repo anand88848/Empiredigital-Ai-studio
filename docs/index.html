@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Higgsfield AI Studio — Empiredigital</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{surface:'#0f0f14','surface-card':'#16161d','surface-muted':'#1e1e28','surface-border':'#2a2a38'}}}}</script>
+<style>body{background:#0f0f14;color:#fff;font-family:system-ui,sans-serif}</style>
+</head>
+<body class="min-h-screen p-6">
+
+<div class="max-w-5xl mx-auto">
+  <!-- Header -->
+  <div class="flex items-center gap-3 mb-8">
+    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-600 to-purple-700 flex items-center justify-center text-white text-lg">✦</div>
+    <div>
+      <h1 class="text-xl font-bold text-white">Higgsfield AI Studio</h1>
+      <p class="text-xs text-gray-500">Empiredigital — Cinematic AI generation</p>
+    </div>
+  </div>
+
+  <div class="grid lg:grid-cols-[280px_1fr] gap-6">
+    <!-- Controls -->
+    <aside class="flex flex-col gap-4">
+
+      <!-- Model -->
+      <div class="rounded-xl border border-[#2a2a38] bg-[#16161d] p-4">
+        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Model</label>
+        <div class="flex flex-col gap-1.5" id="model-list"></div>
+        <div class="mt-3">
+          <button onclick="toggleCustom()" class="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1">▾ Custom model</button>
+          <input id="custom-model" type="text" placeholder="e.g. reve/text-to-image"
+            class="hidden mt-2 w-full rounded-lg bg-[#1e1e28] border border-[#2a2a38] text-sm text-white px-3 py-2 focus:outline-none focus:border-fuchsia-600">
+        </div>
+      </div>
+
+      <!-- Prompt -->
+      <div class="rounded-xl border border-[#2a2a38] bg-[#16161d] p-4">
+        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Prompt</label>
+        <textarea id="prompt" rows="4" placeholder="Describe what you want to generate…"
+          class="w-full rounded-lg bg-[#1e1e28] border border-[#2a2a38] text-sm text-white placeholder-gray-600 px-3 py-2 resize-none focus:outline-none focus:border-fuchsia-600"></textarea>
+      </div>
+
+      <!-- Settings -->
+      <div class="rounded-xl border border-[#2a2a38] bg-[#16161d] p-4">
+        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Aspect Ratio</label>
+        <div class="flex flex-wrap gap-1" id="ratio-list"></div>
+      </div>
+
+      <button id="generate-btn" onclick="generate()"
+        class="w-full py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white hover:from-fuchsia-500 hover:to-purple-500 transition-all flex items-center justify-center gap-2">
+        <span id="btn-icon">✦</span>
+        <span id="btn-text">Generate</span>
+      </button>
+    </aside>
+
+    <!-- Output -->
+    <section class="rounded-xl border border-[#2a2a38] bg-[#16161d] p-6 min-h-[420px] flex flex-col">
+      <div id="output-empty" class="flex-1 flex flex-col items-center justify-center text-gray-600">
+        <div class="text-4xl mb-3 opacity-20">✦</div>
+        <p class="text-sm">Pick a model and hit Generate</p>
+      </div>
+      <div id="output-error" class="hidden rounded-lg bg-red-950/40 border border-red-800/50 p-4 text-sm text-red-300"></div>
+      <div id="output-job" class="hidden flex flex-col gap-4">
+        <div id="job-status" class="flex items-center gap-3 rounded-lg border p-3 text-sm"></div>
+        <div id="job-media"></div>
+        <pre id="job-raw" class="text-xs text-gray-600 font-mono whitespace-pre-wrap"></pre>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+const HF_KEY = 'a48422f2-29bd-4625-a6d3-3169bbd890c0';
+const HF_SEC = 'f2dd0cdff609a70556cfd1394be5c50dfb1555ee9f26e7b120f61a29c6310f6b';
+const BASE   = 'https://platform.higgsfield.ai';
+
+const MODELS = [
+  {value:'nano_banana_2',       label:'Nano Banana 2',   desc:'Fast product & lifestyle images'},
+  {value:'soul_cinematic',      label:'Soul Cinematic',  desc:'Cinematic video generation'},
+  {value:'reve/text-to-image',  label:'Reve',            desc:'High-quality text-to-image'},
+  {value:'bytedance/seedream/v4/text-to-image', label:'Seedream v4', desc:'Bytedance image model'},
+];
+
+const RATIOS = ['1:1','16:9','9:16','4:3','3:4'];
+let selectedModel = MODELS[0].value;
+let selectedRatio = '1:1';
+let pollTimer = null;
+
+// Render models
+const ml = document.getElementById('model-list');
+MODELS.forEach(m => {
+  const btn = document.createElement('button');
+  btn.id = 'model-' + m.value.replace(/\//g,'-');
+  btn.className = 'text-left px-3 py-2.5 rounded-lg text-sm border border-transparent text-gray-400 hover:text-white hover:bg-[#1e1e28] transition-all';
+  btn.innerHTML = `<span class="font-medium block">${m.label}</span><span class="text-xs text-gray-500">${m.desc}</span>`;
+  btn.onclick = () => selectModel(m.value);
+  ml.appendChild(btn);
+});
+selectModel(MODELS[0].value);
+
+// Render ratios
+const rl = document.getElementById('ratio-list');
+RATIOS.forEach(r => {
+  const btn = document.createElement('button');
+  btn.id = 'ratio-' + r.replace(':','-');
+  btn.className = 'px-2.5 py-1 rounded-lg text-xs font-medium border border-transparent bg-[#1e1e28] text-gray-500 hover:text-white transition-all';
+  btn.textContent = r;
+  btn.onclick = () => selectRatio(r);
+  rl.appendChild(btn);
+});
+selectRatio('1:1');
+
+function selectModel(v) {
+  selectedModel = v;
+  MODELS.forEach(m => {
+    const el = document.getElementById('model-' + m.value.replace(/\//g,'-'));
+    if (!el) return;
+    el.className = m.value === v
+      ? 'text-left px-3 py-2.5 rounded-lg text-sm border border-fuchsia-600/40 bg-fuchsia-600/20 text-fuchsia-300 transition-all'
+      : 'text-left px-3 py-2.5 rounded-lg text-sm border border-transparent text-gray-400 hover:text-white hover:bg-[#1e1e28] transition-all';
+  });
+}
+
+function selectRatio(r) {
+  selectedRatio = r;
+  RATIOS.forEach(x => {
+    const el = document.getElementById('ratio-' + x.replace(':','-'));
+    el.className = x === r
+      ? 'px-2.5 py-1 rounded-lg text-xs font-medium border border-fuchsia-600/40 bg-fuchsia-600/20 text-fuchsia-300 transition-all'
+      : 'px-2.5 py-1 rounded-lg text-xs font-medium border border-transparent bg-[#1e1e28] text-gray-500 hover:text-white transition-all';
+  });
+}
+
+function toggleCustom() {
+  const el = document.getElementById('custom-model');
+  el.classList.toggle('hidden');
+}
+
+function hfHeaders() {
+  return {
+    'hf-api-key': HF_KEY,
+    'hf-secret':  HF_SEC,
+    'Authorization': `Key ${HF_KEY}:${HF_SEC}`,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('job-status');
+  const colors = {
+    pending:   'bg-fuchsia-950/40 border-fuchsia-800/50 text-fuchsia-300',
+    done:      'bg-green-950/40 border-green-800/50 text-green-300',
+    failed:    'bg-red-950/40 border-red-800/50 text-red-300',
+  };
+  el.className = `flex items-center gap-3 rounded-lg border p-3 text-sm ${colors[type]||colors.pending}`;
+  el.innerHTML = msg;
+}
+
+async function pollStatus(id) {
+  try {
+    const res = await fetch(`${BASE}/requests/${id}/status`, { headers: hfHeaders() });
+    const data = await res.json();
+    document.getElementById('job-raw').textContent = JSON.stringify(data, null, 2).slice(0, 400);
+
+    if (data.images?.length) {
+      clearInterval(pollTimer);
+      showStatus('✓ Completed', 'done');
+      const media = document.getElementById('job-media');
+      media.innerHTML = data.images.map(img =>
+        `<img src="${img.url||img}" class="w-full rounded-lg border border-[#2a2a38] mb-2">
+         <a href="${img.url||img}" download target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-fuchsia-600/20 border border-fuchsia-600/40 text-fuchsia-300 text-sm hover:bg-fuchsia-600/30">↓ Download</a>`
+      ).join('');
+      document.getElementById('generate-btn').disabled = false;
+      document.getElementById('btn-text').textContent = 'Generate';
+      return;
+    }
+    if (data.video?.url) {
+      clearInterval(pollTimer);
+      showStatus('✓ Completed', 'done');
+      document.getElementById('job-media').innerHTML =
+        `<video src="${data.video.url}" controls class="w-full rounded-lg border border-[#2a2a38] mb-2"></video>
+         <a href="${data.video.url}" download target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-fuchsia-600/20 border border-fuchsia-600/40 text-fuchsia-300 text-sm hover:bg-fuchsia-600/30">↓ Download</a>`;
+      document.getElementById('generate-btn').disabled = false;
+      document.getElementById('btn-text').textContent = 'Generate';
+      return;
+    }
+    if (data.status === 'failed' || data.status === 'nsfw' || data.status === 'cancelled') {
+      clearInterval(pollTimer);
+      showStatus(`✗ ${data.status}`, 'failed');
+      document.getElementById('generate-btn').disabled = false;
+      document.getElementById('btn-text').textContent = 'Generate';
+    } else {
+      showStatus(`⏳ ${data.status || 'processing'}… (polling every 4s)`, 'pending');
+    }
+  } catch(e) { /* keep polling */ }
+}
+
+async function generate() {
+  const customEl = document.getElementById('custom-model');
+  const model = (!customEl.classList.contains('hidden') && customEl.value.trim())
+    ? customEl.value.trim() : selectedModel;
+  const prompt = document.getElementById('prompt').value;
+
+  document.getElementById('output-empty').classList.add('hidden');
+  document.getElementById('output-error').classList.add('hidden');
+  document.getElementById('output-job').classList.remove('hidden');
+  document.getElementById('job-media').innerHTML = '';
+  document.getElementById('job-raw').textContent = '';
+  document.getElementById('generate-btn').disabled = true;
+  document.getElementById('btn-text').textContent = 'Generating…';
+  showStatus('⏳ Starting generation…', 'pending');
+  if (pollTimer) clearInterval(pollTimer);
+
+  try {
+    // Try new unified endpoint first
+    let res = await fetch(`${BASE}/${model}`, {
+      method: 'POST',
+      headers: hfHeaders(),
+      body: JSON.stringify({ prompt, aspect_ratio: selectedRatio }),
+    });
+
+    if (!res.ok) {
+      // Fallback to legacy endpoint
+      res = await fetch(`${BASE}/agents/jobs`, {
+        method: 'POST',
+        headers: hfHeaders(),
+        body: JSON.stringify({ job_set_type: model, prompt, aspect_ratio: selectedRatio }),
+      });
+    }
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`${res.status}: ${txt}`);
+    }
+
+    const data = await res.json();
+    document.getElementById('job-raw').textContent = JSON.stringify(data, null, 2).slice(0, 400);
+    const jobId = data.request_id || data.id;
+
+    if (data.images?.length || data.video?.url || data.result_url) {
+      showStatus('✓ Completed instantly', 'done');
+      document.getElementById('generate-btn').disabled = false;
+      document.getElementById('btn-text').textContent = 'Generate';
+    } else if (jobId) {
+      showStatus('⏳ Processing… (polling every 4s)', 'pending');
+      pollTimer = setInterval(() => pollStatus(jobId), 4000);
+    }
+  } catch(e) {
+    document.getElementById('output-error').classList.remove('hidden');
+    document.getElementById('output-error').textContent = e.message;
+    document.getElementById('output-job').classList.add('hidden');
+    document.getElementById('generate-btn').disabled = false;
+    document.getElementById('btn-text').textContent = 'Generate';
+  }
+}
+</script>
+</body>
+</html>
