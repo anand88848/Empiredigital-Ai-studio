@@ -9,10 +9,12 @@ function getCredentials(): string {
   return key;
 }
 
-// Auth format: "Key KEY_ID:KEY_SECRET"
+// Supports both single-token (Bearer) and KEY_ID:KEY_SECRET (Key) formats
 function headers() {
+  const creds = getCredentials();
+  const auth = creds.includes(':') ? `Key ${creds}` : `Bearer ${creds}`;
   return {
-    'Authorization': `Key ${getCredentials()}`,
+    'Authorization': auth,
     'Content-Type': 'application/json',
   };
 }
