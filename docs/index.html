@@ -10,7 +10,6 @@
 <body class="min-h-screen p-6">
 <div class="max-w-5xl mx-auto">
 
-  <!-- Header -->
   <div class="flex items-center gap-3 mb-6">
     <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-600 to-purple-700 flex items-center justify-center text-xl">✦</div>
     <div>
@@ -23,33 +22,41 @@
   <div id="creds-banner" class="mb-6 rounded-xl border border-yellow-800/50 bg-yellow-950/30 p-4">
     <p class="text-xs font-semibold text-yellow-300 mb-3">Enter your Higgsfield credentials to get started</p>
     <div class="flex flex-col sm:flex-row gap-2">
-      <input id="inp-key" type="text" placeholder="API Key ID (a48422f2-...)" value=""
+      <input id="inp-key" type="text" placeholder="API Key ID (a48422f2-...)"
         class="flex-1 rounded-lg bg-[#1e1e28] border border-[#2a2a38] text-sm text-white px-3 py-2 focus:outline-none focus:border-yellow-600">
       <input id="inp-sec" type="password" placeholder="API Secret"
         class="flex-1 rounded-lg bg-[#1e1e28] border border-[#2a2a38] text-sm text-white px-3 py-2 focus:outline-none focus:border-yellow-600">
-      <button onclick="saveCreds()" class="px-4 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-semibold transition-all">Connect</button>
+      <button onclick="saveCreds()" class="px-4 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-semibold">Connect</button>
     </div>
-    <p class="text-xs text-gray-600 mt-2">Credentials are saved in your browser only — never sent anywhere except Higgsfield.</p>
+    <p class="text-xs text-gray-600 mt-2">Credentials saved in your browser only.</p>
   </div>
 
   <div id="studio" class="hidden grid lg:grid-cols-[280px_1fr] gap-6">
-    <!-- Controls -->
     <aside class="flex flex-col gap-4">
+
+      <!-- Model -->
       <div class="rounded-xl border border-[#2a2a38] bg-[#16161d] p-4">
         <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Model</label>
         <div class="flex flex-col gap-1.5" id="model-list"></div>
-        <button onclick="toggleCustom()" class="mt-3 text-xs text-gray-500 hover:text-gray-300">▾ Custom model</button>
-        <input id="custom-model" type="text" placeholder="e.g. reve/text-to-image"
-          class="hidden mt-2 w-full rounded-lg bg-[#1e1e28] border border-[#2a2a38] text-sm text-white px-3 py-2 focus:outline-none focus:border-fuchsia-600">
       </div>
 
+      <!-- Prompt -->
       <div class="rounded-xl border border-[#2a2a38] bg-[#16161d] p-4">
         <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Prompt</label>
         <textarea id="prompt" rows="4" placeholder="Describe what you want to generate…"
           class="w-full rounded-lg bg-[#1e1e28] border border-[#2a2a38] text-sm text-white placeholder-gray-600 px-3 py-2 resize-none focus:outline-none focus:border-fuchsia-600"></textarea>
       </div>
 
-      <div class="rounded-xl border border-[#2a2a38] bg-[#16161d] p-4">
+      <!-- Image URL (video models only) -->
+      <div id="img-url-wrap" class="hidden rounded-xl border border-[#2a2a38] bg-[#16161d] p-4">
+        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Input Image URL <span class="text-red-400">*</span></label>
+        <input id="img-url" type="url" placeholder="https://… (required for video models)"
+          class="w-full rounded-lg bg-[#1e1e28] border border-[#2a2a38] text-sm text-white px-3 py-2 focus:outline-none focus:border-fuchsia-600">
+        <p class="text-xs text-gray-600 mt-1">Upload image to <a href="https://imgbb.com" target="_blank" class="underline text-gray-500">imgbb.com</a> and paste URL here.</p>
+      </div>
+
+      <!-- Aspect Ratio (image models only) -->
+      <div id="ratio-wrap" class="rounded-xl border border-[#2a2a38] bg-[#16161d] p-4">
         <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Aspect Ratio</label>
         <div class="flex flex-wrap gap-1" id="ratio-list"></div>
       </div>
@@ -58,7 +65,6 @@
         class="w-full py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white hover:from-fuchsia-500 hover:to-purple-500 flex items-center justify-center gap-2">
         ✦ <span id="btn-text">Generate</span>
       </button>
-
       <button onclick="resetCreds()" class="text-xs text-gray-600 hover:text-gray-400 text-center">Change credentials</button>
     </aside>
 
@@ -68,31 +74,34 @@
         <div class="text-4xl mb-3 opacity-20">✦</div>
         <p class="text-sm">Pick a model and hit Generate</p>
       </div>
-      <div id="out-error" class="hidden rounded-lg bg-red-950/40 border border-red-800/50 p-4 text-sm text-red-300"></div>
+      <div id="out-error" class="hidden rounded-lg bg-red-950/40 border border-red-800/50 p-4 text-sm text-red-300 mb-3"></div>
       <div id="out-job" class="hidden flex-col gap-4">
         <div id="job-status" class="flex items-center gap-3 rounded-lg border p-3 text-sm"></div>
         <div id="job-media"></div>
-        <pre id="job-raw" class="text-xs text-gray-600 font-mono whitespace-pre-wrap break-all"></pre>
+        <pre id="job-raw" class="text-xs text-gray-600 font-mono whitespace-pre-wrap break-all max-h-48 overflow-auto"></pre>
       </div>
     </section>
   </div>
 </div>
 
 <script>
+// Models: type = 'image' | 'image-old' | 'video'
+// image-old = Soul, uses /v1/text2image/soul + /v1/job-sets poll
+// image     = unified API, returns request_id
+// video     = unified API, needs image_url, returns request_id
 const MODELS = [
-  {v:'nano_banana_2',                             l:'Nano Banana 2',  d:'Product & lifestyle images'},
-  {v:'soul_cinematic',                            l:'Soul Cinematic', d:'Cinematic video'},
-  {v:'reve/text-to-image',                        l:'Reve',           d:'High-quality text-to-image'},
-  {v:'bytedance/seedream/v4/text-to-image',        l:'Seedream v4',    d:'Bytedance image model'},
-  {v:'kling-video/v2.1/pro/image-to-video',        l:'Kling v2.1 Pro', d:'Image-to-video'},
-  {v:'bytedance/seedance/v1/pro/image-to-video',   l:'Seedance v1',    d:'Image-to-video (Bytedance)'},
+  {v:'soul',                                       l:'Soul',           d:'Higgsfield image model',     type:'image-old'},
+  {v:'reve/text-to-image',                         l:'Reve',           d:'High-quality text-to-image', type:'image'},
+  {v:'bytedance/seedream/v4/text-to-image',         l:'Seedream v4',    d:'Bytedance image model',      type:'image'},
+  {v:'kling-video/v2.1/pro/image-to-video',         l:'Kling v2.1 Pro', d:'Image-to-video (needs image)',type:'video'},
+  {v:'bytedance/seedance/v1/pro/image-to-video',    l:'Seedance v1',    d:'Image-to-video (needs image)',type:'video'},
+  {v:'higgsfield-ai/dop/standard',                  l:'DOP Standard',   d:'Image-to-video (needs image)',type:'video'},
 ];
 const RATIOS = ['1:1','16:9','9:16','4:3','3:4'];
 const BASE = 'https://platform.higgsfield.ai';
 let selModel = MODELS[0].v, selRatio = '1:1', pollTimer = null;
 let HF_KEY = '', HF_SEC = '';
 
-// Load saved creds
 (function init() {
   HF_KEY = localStorage.getItem('hf_key') || '';
   HF_SEC = localStorage.getItem('hf_sec') || '';
@@ -122,11 +131,13 @@ function showStudio() {
   document.getElementById('studio').classList.add('grid');
 }
 
+function getModel() { return MODELS.find(m => m.v === selModel); }
+
 function buildUI() {
   const ml = document.getElementById('model-list');
   MODELS.forEach(m => {
     const b = document.createElement('button');
-    b.id = 'M'+m.v.replace(/[\/]/g,'_');
+    b.id = 'M' + m.v.replace(/[\/.]/g,'_');
     b.onclick = () => selM(m.v);
     b.innerHTML = `<span class="font-medium block text-left">${m.l}</span><span class="text-xs text-gray-500">${m.d}</span>`;
     ml.appendChild(b);
@@ -135,7 +146,7 @@ function buildUI() {
   const rl = document.getElementById('ratio-list');
   RATIOS.forEach(r => {
     const b = document.createElement('button');
-    b.id = 'R'+r.replace(':','_');
+    b.id = 'R' + r.replace(':','_');
     b.textContent = r; b.onclick = () => selR(r);
     rl.appendChild(b);
   });
@@ -145,26 +156,25 @@ function buildUI() {
 function selM(v) {
   selModel = v;
   MODELS.forEach(m => {
-    const el = document.getElementById('M'+m.v.replace(/[\/]/g,'_'));
+    const el = document.getElementById('M' + m.v.replace(/[\/.]/g,'_'));
     if (!el) return;
     el.className = m.v===v
       ? 'px-3 py-2.5 rounded-lg text-sm border border-fuchsia-600/40 bg-fuchsia-600/20 text-fuchsia-300 w-full text-left'
       : 'px-3 py-2.5 rounded-lg text-sm border border-transparent text-gray-400 hover:text-white hover:bg-[#1e1e28] w-full text-left';
   });
+  const isVideo = getModel()?.type === 'video';
+  document.getElementById('img-url-wrap').classList.toggle('hidden', !isVideo);
+  document.getElementById('ratio-wrap').classList.toggle('hidden', isVideo);
 }
 
 function selR(r) {
   selRatio = r;
   RATIOS.forEach(x => {
-    const el = document.getElementById('R'+x.replace(':','_'));
+    const el = document.getElementById('R' + x.replace(':','_'));
     el.className = x===r
       ? 'px-2.5 py-1 rounded-lg text-xs font-medium border border-fuchsia-600/40 bg-fuchsia-600/20 text-fuchsia-300'
       : 'px-2.5 py-1 rounded-lg text-xs font-medium border border-transparent bg-[#1e1e28] text-gray-500 hover:text-white';
   });
-}
-
-function toggleCustom() {
-  document.getElementById('custom-model').classList.toggle('hidden');
 }
 
 function hdrs() {
@@ -180,42 +190,81 @@ function setStatus(msg, type) {
   el.innerHTML = msg;
 }
 
-function showMedia(data) {
+function showMedia(d) {
   const el = document.getElementById('job-media');
-  if (data.images?.length) {
-    el.innerHTML = data.images.map(img => {
-      const url = img.url||img;
+  // New API: images array
+  if (d.images?.length) {
+    el.innerHTML = d.images.map(img => {
+      const url = img.url || img;
       return `<img src="${url}" class="w-full rounded-lg border border-[#2a2a38] mb-2"><a href="${url}" download target="_blank" class="inline-flex items-center gap-2 px-4 py-2 mb-3 rounded-lg bg-fuchsia-600/20 border border-fuchsia-600/40 text-fuchsia-300 text-sm">↓ Download</a>`;
     }).join('');
     return true;
   }
-  if (data.video?.url) {
-    el.innerHTML = `<video src="${data.video.url}" controls class="w-full rounded-lg border border-[#2a2a38] mb-2"></video><a href="${data.video.url}" download target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-fuchsia-600/20 border border-fuchsia-600/40 text-fuchsia-300 text-sm">↓ Download</a>`;
+  // New API: video object
+  if (d.video?.url) {
+    el.innerHTML = `<video src="${d.video.url}" controls class="w-full rounded-lg border border-[#2a2a38] mb-2"></video><a href="${d.video.url}" download target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-fuchsia-600/20 border border-fuchsia-600/40 text-fuchsia-300 text-sm">↓ Download</a>`;
     return true;
+  }
+  // Old API (Soul): jobs[].results.raw.url
+  if (d.jobs?.length) {
+    const done = d.jobs.filter(j => j.status === 'completed' && j.results);
+    if (done.length) {
+      el.innerHTML = done.map(j => {
+        const url = j.results.raw?.url || j.results.min?.url;
+        if (!url) return '';
+        const isVid = j.results.raw?.type?.startsWith('video');
+        return isVid
+          ? `<video src="${url}" controls class="w-full rounded-lg border border-[#2a2a38] mb-2"></video><a href="${url}" download target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-fuchsia-600/20 border border-fuchsia-600/40 text-fuchsia-300 text-sm">↓ Download</a>`
+          : `<img src="${url}" class="w-full rounded-lg border border-[#2a2a38] mb-2"><a href="${url}" download target="_blank" class="inline-flex items-center gap-2 px-4 py-2 mb-3 rounded-lg bg-fuchsia-600/20 border border-fuchsia-600/40 text-fuchsia-300 text-sm">↓ Download</a>`;
+      }).join('');
+      return true;
+    }
+    // Check if all failed
+    if (d.jobs.every(j => ['failed','nsfw','cancelled'].includes(j.status))) return 'failed';
   }
   return false;
 }
 
-async function poll(id) {
+async function pollNew(id) {
   try {
-    const r = await fetch(`${BASE}/requests/${id}/status`,{headers:hdrs()});
+    const r = await fetch(`${BASE}/requests/${id}/status`, {headers:hdrs()});
     const d = await r.json();
-    document.getElementById('job-raw').textContent = JSON.stringify(d,null,2).slice(0,600);
-    if (showMedia(d)) { clearInterval(pollTimer); done(); return; }
-    if (['failed','nsfw','cancelled'].includes(d.status)) { clearInterval(pollTimer); setStatus('✗ '+d.status,'failed'); done(); return; }
-    setStatus('⏳ '+(d.status||'processing')+'...','pending');
+    document.getElementById('job-raw').textContent = JSON.stringify(d,null,2).slice(0,800);
+    const media = showMedia(d);
+    if (media === true) { clearInterval(pollTimer); setStatus('✓ Completed','done'); endGen(); }
+    else if (media === 'failed' || ['failed','nsfw','cancelled'].includes(d.status)) { clearInterval(pollTimer); setStatus('✗ '+d.status,'failed'); endGen(); }
+    else setStatus('⏳ '+(d.status||'processing')+'…','pending');
   } catch{}
 }
 
-function done() {
+async function pollOld(id) {
+  try {
+    const r = await fetch(`${BASE}/v1/job-sets/${id}`, {headers:hdrs()});
+    const d = await r.json();
+    document.getElementById('job-raw').textContent = JSON.stringify(d,null,2).slice(0,800);
+    const media = showMedia(d);
+    if (media === true) { clearInterval(pollTimer); setStatus('✓ Completed','done'); endGen(); }
+    else if (media === 'failed') { clearInterval(pollTimer); setStatus('✗ Failed','failed'); endGen(); }
+    else {
+      const statuses = d.jobs?.map(j=>j.status) || [];
+      setStatus('⏳ '+(statuses[0]||'processing')+'…','pending');
+    }
+  } catch{}
+}
+
+function endGen() {
   document.getElementById('gen-btn').disabled = false;
   document.getElementById('btn-text').textContent = 'Generate';
 }
 
 async function generate() {
-  const custom = document.getElementById('custom-model');
-  const model = (!custom.classList.contains('hidden') && custom.value.trim()) ? custom.value.trim() : selModel;
-  const prompt = document.getElementById('prompt').value;
+  const prompt = document.getElementById('prompt').value.trim();
+  const m = getModel();
+  if (!prompt) return alert('Enter a prompt');
+  if (m.type === 'video') {
+    const imgUrl = document.getElementById('img-url').value.trim();
+    if (!imgUrl) return alert('Image URL is required for video models');
+  }
 
   document.getElementById('out-empty').classList.add('hidden');
   document.getElementById('out-error').classList.add('hidden');
@@ -224,25 +273,60 @@ async function generate() {
   document.getElementById('job-media').innerHTML = '';
   document.getElementById('job-raw').textContent = '';
   document.getElementById('gen-btn').disabled = true;
-  document.getElementById('btn-text').textContent = 'Generating...';
-  setStatus('⏳ Sending request...','pending');
+  document.getElementById('btn-text').textContent = 'Generating…';
+  setStatus('⏳ Sending request…','pending');
   if (pollTimer) clearInterval(pollTimer);
 
   try {
-    let res = await fetch(`${BASE}/${model}`,{method:'POST',headers:hdrs(),body:JSON.stringify({prompt,aspect_ratio:selRatio})});
-    if (!res.ok) res = await fetch(`${BASE}/agents/jobs`,{method:'POST',headers:hdrs(),body:JSON.stringify({job_set_type:model,prompt,aspect_ratio:selRatio})});
-    if (!res.ok) { const t=await res.text(); throw new Error(res.status+': '+t); }
-    const d = await res.json();
-    document.getElementById('job-raw').textContent = JSON.stringify(d,null,2).slice(0,600);
-    if (showMedia(d)) { setStatus('✓ Completed','done'); done(); return; }
-    const jobId = d.request_id||d.id;
-    if (jobId) { setStatus('⏳ Processing... (polling every 4s)','pending'); pollTimer = setInterval(()=>poll(jobId),4000); }
-    else { setStatus('✓ Queued','done'); done(); }
+    let res, d, jobId, pollFn;
+
+    if (m.type === 'image-old') {
+      // Soul: POST /v1/text2image/soul
+      const wh = Math.round(selRatio==='1:1'?'1024x1024':selRatio==='16:9'?'2048x1152':selRatio==='9:16'?'1152x2048':selRatio==='4:3'?'1365x1024':'1024x1365');
+      const whMap = {'1:1':'1024x1024','16:9':'2048x1152','9:16':'1152x2048','4:3':'1365x1024','3:4':'1024x1365'};
+      const body = {params:{prompt,quality:'1080p',batch_size:1,width_and_height:whMap[selRatio]||'1024x1024'}};
+      res = await fetch(`${BASE}/v1/text2image/soul`,{method:'POST',headers:hdrs(),body:JSON.stringify(body)});
+      if (!res.ok) { const t=await res.text(); throw new Error(res.status+': '+t); }
+      d = await res.json();
+      jobId = d.id;
+      pollFn = pollOld;
+
+    } else if (m.type === 'image') {
+      // Reve / Seedream: POST /{model_id}
+      const body = {prompt, aspect_ratio:selRatio, resolution:'1080p'};
+      res = await fetch(`${BASE}/${m.v}`,{method:'POST',headers:hdrs(),body:JSON.stringify(body)});
+      if (!res.ok) { const t=await res.text(); throw new Error(res.status+': '+t); }
+      d = await res.json();
+      jobId = d.request_id;
+      pollFn = pollNew;
+
+    } else {
+      // Video: POST /{model_id} with image_url
+      const imageUrl = document.getElementById('img-url').value.trim();
+      const body = {prompt, image_url: imageUrl};
+      res = await fetch(`${BASE}/${m.v}`,{method:'POST',headers:hdrs(),body:JSON.stringify(body)});
+      if (!res.ok) { const t=await res.text(); throw new Error(res.status+': '+t); }
+      d = await res.json();
+      jobId = d.request_id;
+      pollFn = pollNew;
+    }
+
+    document.getElementById('job-raw').textContent = JSON.stringify(d,null,2).slice(0,800);
+
+    if (jobId) {
+      setStatus('⏳ Processing… (polling every 4s)','pending');
+      pollTimer = setInterval(() => pollFn(jobId), 4000);
+    } else {
+      // Check if result came back immediately
+      if (!showMedia(d)) setStatus('⏳ Queued','pending');
+      else { setStatus('✓ Completed','done'); endGen(); }
+    }
+
   } catch(e) {
     document.getElementById('out-error').classList.remove('hidden');
     document.getElementById('out-error').textContent = e.message;
     jobEl.classList.add('hidden'); jobEl.classList.remove('flex');
-    done();
+    endGen();
   }
 }
 </script>
