@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createGeneration } from '@/lib/higgsfield';
-import type { HiggsfieldGenerateRequest } from '@/types/higgsfield';
+import { createJob } from '@/lib/higgsfield';
+import type { CreateJobRequest } from '@/lib/higgsfield';
 
 export async function POST(req: NextRequest) {
   try {
-    const body: HiggsfieldGenerateRequest = await req.json();
+    const body: CreateJobRequest = await req.json();
 
-    if (!body.effect) {
-      return NextResponse.json({ error: 'effect is required' }, { status: 400 });
+    if (!body.job_set_type) {
+      return NextResponse.json({ error: 'job_set_type is required' }, { status: 400 });
     }
 
-    const result = await createGeneration(body);
-    return NextResponse.json(result);
+    const job = await createJob(body);
+    return NextResponse.json(job);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
