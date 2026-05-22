@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  createTextToVideo,
-  createImageToVideo,
-  applyVideoEffect,
+  generateTextToVideo,
+  generateImageToVideo,
+  generateImage,
 } from '@/lib/higgsfield';
 
 interface GenerateBody {
-  mode: 'text-to-video' | 'image-to-video' | 'effect';
+  mode: 'text-to-video' | 'image-to-video' | 'text-to-image';
   prompt?: string;
-  negative_prompt?: string;
   image_url?: string;
-  video_url?: string;
-  effect?: string;
-  effect_strength?: number;
+  model?: 'lite' | 'turbo' | 'standard';
+  motion_id?: string;
+  style_id?: string;
   duration?: number;
-  width?: number;
-  height?: number;
   seed?: number;
+  width_and_height?: '512x512' | '768x512' | '512x768' | '1024x768' | '768x1024';
+  quality?: 'normal' | 'high';
 }
 
 export async function POST(req: NextRequest) {
@@ -24,41 +23,37 @@ export async function POST(req: NextRequest) {
     const body = await req.json() as GenerateBody;
 
     if (body.mode === 'text-to-video') {
-      if (!body.prompt) {
-        return NextResponse.json({ error: 'prompt is required for text-to-video' }, { status: 400 });
-      }
-      const result = await createTextToVideo({
+      if (!body.prompt) return NextResponse.json({ error: 'prompt is required' }, { status: 400 });
+      const result = await generateTextToVideo({
         prompt: body.prompt,
-        negative_prompt: body.negative_prompt,
+        model: body.model,
+        motion_id: body.motion_id,
         duration: body.duration,
-        width: body.width,
-        height: body.height,
         seed: body.seed,
       });
       return NextResponse.json(result);
     }
 
     if (body.mode === 'image-to-video') {
-      if (!body.image_url) {
-        return NextResponse.json({ error: 'image_url is required for image-to-video' }, { status: 400 });
-      }
-      const result = await createImageToVideo({
+      if (!body.image_url) return NextResponse.json({ error: 'image_url is required' }, { status: 400 });
+      const result = await generateImageToVideo({
         image_url: body.image_url,
         prompt: body.prompt,
-        duration: body.duration,
+        model: body.model,
+        motion_id: body.motion_id,
         seed: body.seed,
       });
       return NextResponse.json(result);
     }
 
-    if (body.mode === 'effect') {
-      if (!body.video_url || !body.effect) {
-        return NextResponse.json({ error: 'video_url and effect are required' }, { status: 400 });
-      }
-      const result = await applyVideoEffect({
-        video_url: body.video_url,
-        effect: body.effect,
-        strength: body.effect_strength,
+    if (body.mode === 'text-to-image') {
+      if (!body.prompt) return NextResponse.json({ error: 'prompt is required' }, { status: 400 });
+      const result = await generateImage({
+        prompt: body.prompt,
+        style_id: body.style_id,
+        width_and_height: body.width_and_height,
+        quality: body.quality,
+        seed: body.seed,
       });
       return NextResponse.json(result);
     }
