@@ -5,255 +5,244 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Higgsfield AI Studio — Empiredigital</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config={theme:{extend:{colors:{surface:'#0f0f14','surface-card':'#16161d','surface-muted':'#1e1e28','surface-border':'#2a2a38'}}}}</script>
 <style>body{background:#0f0f14;color:#fff;font-family:system-ui,sans-serif}</style>
 </head>
 <body class="min-h-screen p-6">
-
 <div class="max-w-5xl mx-auto">
+
   <!-- Header -->
-  <div class="flex items-center gap-3 mb-8">
-    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-600 to-purple-700 flex items-center justify-center text-white text-lg">✦</div>
+  <div class="flex items-center gap-3 mb-6">
+    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-600 to-purple-700 flex items-center justify-center text-xl">✦</div>
     <div>
-      <h1 class="text-xl font-bold text-white">Higgsfield AI Studio</h1>
+      <h1 class="text-xl font-bold">Higgsfield AI Studio</h1>
       <p class="text-xs text-gray-500">Empiredigital — Cinematic AI generation</p>
     </div>
   </div>
 
-  <div class="grid lg:grid-cols-[280px_1fr] gap-6">
+  <!-- Credentials banner -->
+  <div id="creds-banner" class="mb-6 rounded-xl border border-yellow-800/50 bg-yellow-950/30 p-4">
+    <p class="text-xs font-semibold text-yellow-300 mb-3">Enter your Higgsfield credentials to get started</p>
+    <div class="flex flex-col sm:flex-row gap-2">
+      <input id="inp-key" type="text" placeholder="API Key ID (a48422f2-...)" value=""
+        class="flex-1 rounded-lg bg-[#1e1e28] border border-[#2a2a38] text-sm text-white px-3 py-2 focus:outline-none focus:border-yellow-600">
+      <input id="inp-sec" type="password" placeholder="API Secret"
+        class="flex-1 rounded-lg bg-[#1e1e28] border border-[#2a2a38] text-sm text-white px-3 py-2 focus:outline-none focus:border-yellow-600">
+      <button onclick="saveCreds()" class="px-4 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-semibold transition-all">Connect</button>
+    </div>
+    <p class="text-xs text-gray-600 mt-2">Credentials are saved in your browser only — never sent anywhere except Higgsfield.</p>
+  </div>
+
+  <div id="studio" class="hidden grid lg:grid-cols-[280px_1fr] gap-6">
     <!-- Controls -->
     <aside class="flex flex-col gap-4">
-
-      <!-- Model -->
       <div class="rounded-xl border border-[#2a2a38] bg-[#16161d] p-4">
         <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Model</label>
         <div class="flex flex-col gap-1.5" id="model-list"></div>
-        <div class="mt-3">
-          <button onclick="toggleCustom()" class="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1">▾ Custom model</button>
-          <input id="custom-model" type="text" placeholder="e.g. reve/text-to-image"
-            class="hidden mt-2 w-full rounded-lg bg-[#1e1e28] border border-[#2a2a38] text-sm text-white px-3 py-2 focus:outline-none focus:border-fuchsia-600">
-        </div>
+        <button onclick="toggleCustom()" class="mt-3 text-xs text-gray-500 hover:text-gray-300">▾ Custom model</button>
+        <input id="custom-model" type="text" placeholder="e.g. reve/text-to-image"
+          class="hidden mt-2 w-full rounded-lg bg-[#1e1e28] border border-[#2a2a38] text-sm text-white px-3 py-2 focus:outline-none focus:border-fuchsia-600">
       </div>
 
-      <!-- Prompt -->
       <div class="rounded-xl border border-[#2a2a38] bg-[#16161d] p-4">
         <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Prompt</label>
         <textarea id="prompt" rows="4" placeholder="Describe what you want to generate…"
           class="w-full rounded-lg bg-[#1e1e28] border border-[#2a2a38] text-sm text-white placeholder-gray-600 px-3 py-2 resize-none focus:outline-none focus:border-fuchsia-600"></textarea>
       </div>
 
-      <!-- Settings -->
       <div class="rounded-xl border border-[#2a2a38] bg-[#16161d] p-4">
-        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Aspect Ratio</label>
+        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Aspect Ratio</label>
         <div class="flex flex-wrap gap-1" id="ratio-list"></div>
       </div>
 
-      <button id="generate-btn" onclick="generate()"
-        class="w-full py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white hover:from-fuchsia-500 hover:to-purple-500 transition-all flex items-center justify-center gap-2">
-        <span id="btn-icon">✦</span>
-        <span id="btn-text">Generate</span>
+      <button id="gen-btn" onclick="generate()"
+        class="w-full py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white hover:from-fuchsia-500 hover:to-purple-500 flex items-center justify-center gap-2">
+        ✦ <span id="btn-text">Generate</span>
       </button>
+
+      <button onclick="resetCreds()" class="text-xs text-gray-600 hover:text-gray-400 text-center">Change credentials</button>
     </aside>
 
     <!-- Output -->
     <section class="rounded-xl border border-[#2a2a38] bg-[#16161d] p-6 min-h-[420px] flex flex-col">
-      <div id="output-empty" class="flex-1 flex flex-col items-center justify-center text-gray-600">
+      <div id="out-empty" class="flex-1 flex flex-col items-center justify-center text-gray-600">
         <div class="text-4xl mb-3 opacity-20">✦</div>
         <p class="text-sm">Pick a model and hit Generate</p>
       </div>
-      <div id="output-error" class="hidden rounded-lg bg-red-950/40 border border-red-800/50 p-4 text-sm text-red-300"></div>
-      <div id="output-job" class="hidden flex flex-col gap-4">
+      <div id="out-error" class="hidden rounded-lg bg-red-950/40 border border-red-800/50 p-4 text-sm text-red-300"></div>
+      <div id="out-job" class="hidden flex-col gap-4">
         <div id="job-status" class="flex items-center gap-3 rounded-lg border p-3 text-sm"></div>
         <div id="job-media"></div>
-        <pre id="job-raw" class="text-xs text-gray-600 font-mono whitespace-pre-wrap"></pre>
+        <pre id="job-raw" class="text-xs text-gray-600 font-mono whitespace-pre-wrap break-all"></pre>
       </div>
     </section>
   </div>
 </div>
 
 <script>
-const HF_KEY = 'a48422f2-29bd-4625-a6d3-3169bbd890c0';
-const HF_SEC = 'f2dd0cdff609a70556cfd1394be5c50dfb1555ee9f26e7b120f61a29c6310f6b';
-const BASE   = 'https://platform.higgsfield.ai';
-
 const MODELS = [
-  {value:'nano_banana_2',       label:'Nano Banana 2',   desc:'Fast product & lifestyle images'},
-  {value:'soul_cinematic',      label:'Soul Cinematic',  desc:'Cinematic video generation'},
-  {value:'reve/text-to-image',  label:'Reve',            desc:'High-quality text-to-image'},
-  {value:'bytedance/seedream/v4/text-to-image', label:'Seedream v4', desc:'Bytedance image model'},
+  {v:'nano_banana_2',                             l:'Nano Banana 2',  d:'Product & lifestyle images'},
+  {v:'soul_cinematic',                            l:'Soul Cinematic', d:'Cinematic video'},
+  {v:'reve/text-to-image',                        l:'Reve',           d:'High-quality text-to-image'},
+  {v:'bytedance/seedream/v4/text-to-image',        l:'Seedream v4',    d:'Bytedance image model'},
+  {v:'kling-video/v2.1/pro/image-to-video',        l:'Kling v2.1 Pro', d:'Image-to-video'},
+  {v:'bytedance/seedance/v1/pro/image-to-video',   l:'Seedance v1',    d:'Image-to-video (Bytedance)'},
 ];
-
 const RATIOS = ['1:1','16:9','9:16','4:3','3:4'];
-let selectedModel = MODELS[0].value;
-let selectedRatio = '1:1';
-let pollTimer = null;
+const BASE = 'https://platform.higgsfield.ai';
+let selModel = MODELS[0].v, selRatio = '1:1', pollTimer = null;
+let HF_KEY = '', HF_SEC = '';
 
-// Render models
-const ml = document.getElementById('model-list');
-MODELS.forEach(m => {
-  const btn = document.createElement('button');
-  btn.id = 'model-' + m.value.replace(/\//g,'-');
-  btn.className = 'text-left px-3 py-2.5 rounded-lg text-sm border border-transparent text-gray-400 hover:text-white hover:bg-[#1e1e28] transition-all';
-  btn.innerHTML = `<span class="font-medium block">${m.label}</span><span class="text-xs text-gray-500">${m.desc}</span>`;
-  btn.onclick = () => selectModel(m.value);
-  ml.appendChild(btn);
-});
-selectModel(MODELS[0].value);
+// Load saved creds
+(function init() {
+  HF_KEY = localStorage.getItem('hf_key') || '';
+  HF_SEC = localStorage.getItem('hf_sec') || '';
+  if (HF_KEY && HF_SEC) showStudio();
+  buildUI();
+})();
 
-// Render ratios
-const rl = document.getElementById('ratio-list');
-RATIOS.forEach(r => {
-  const btn = document.createElement('button');
-  btn.id = 'ratio-' + r.replace(':','-');
-  btn.className = 'px-2.5 py-1 rounded-lg text-xs font-medium border border-transparent bg-[#1e1e28] text-gray-500 hover:text-white transition-all';
-  btn.textContent = r;
-  btn.onclick = () => selectRatio(r);
-  rl.appendChild(btn);
-});
-selectRatio('1:1');
+function saveCreds() {
+  HF_KEY = document.getElementById('inp-key').value.trim();
+  HF_SEC = document.getElementById('inp-sec').value.trim();
+  if (!HF_KEY || !HF_SEC) return alert('Enter both Key ID and Secret');
+  localStorage.setItem('hf_key', HF_KEY);
+  localStorage.setItem('hf_sec', HF_SEC);
+  showStudio();
+}
 
-function selectModel(v) {
-  selectedModel = v;
+function resetCreds() {
+  localStorage.removeItem('hf_key'); localStorage.removeItem('hf_sec');
+  HF_KEY = ''; HF_SEC = '';
+  document.getElementById('studio').classList.add('hidden');
+  document.getElementById('creds-banner').classList.remove('hidden');
+}
+
+function showStudio() {
+  document.getElementById('creds-banner').classList.add('hidden');
+  document.getElementById('studio').classList.remove('hidden');
+  document.getElementById('studio').classList.add('grid');
+}
+
+function buildUI() {
+  const ml = document.getElementById('model-list');
   MODELS.forEach(m => {
-    const el = document.getElementById('model-' + m.value.replace(/\//g,'-'));
+    const b = document.createElement('button');
+    b.id = 'M'+m.v.replace(/[\/]/g,'_');
+    b.onclick = () => selM(m.v);
+    b.innerHTML = `<span class="font-medium block text-left">${m.l}</span><span class="text-xs text-gray-500">${m.d}</span>`;
+    ml.appendChild(b);
+  });
+  selM(MODELS[0].v);
+  const rl = document.getElementById('ratio-list');
+  RATIOS.forEach(r => {
+    const b = document.createElement('button');
+    b.id = 'R'+r.replace(':','_');
+    b.textContent = r; b.onclick = () => selR(r);
+    rl.appendChild(b);
+  });
+  selR('1:1');
+}
+
+function selM(v) {
+  selModel = v;
+  MODELS.forEach(m => {
+    const el = document.getElementById('M'+m.v.replace(/[\/]/g,'_'));
     if (!el) return;
-    el.className = m.value === v
-      ? 'text-left px-3 py-2.5 rounded-lg text-sm border border-fuchsia-600/40 bg-fuchsia-600/20 text-fuchsia-300 transition-all'
-      : 'text-left px-3 py-2.5 rounded-lg text-sm border border-transparent text-gray-400 hover:text-white hover:bg-[#1e1e28] transition-all';
+    el.className = m.v===v
+      ? 'px-3 py-2.5 rounded-lg text-sm border border-fuchsia-600/40 bg-fuchsia-600/20 text-fuchsia-300 w-full text-left'
+      : 'px-3 py-2.5 rounded-lg text-sm border border-transparent text-gray-400 hover:text-white hover:bg-[#1e1e28] w-full text-left';
   });
 }
 
-function selectRatio(r) {
-  selectedRatio = r;
+function selR(r) {
+  selRatio = r;
   RATIOS.forEach(x => {
-    const el = document.getElementById('ratio-' + x.replace(':','-'));
-    el.className = x === r
-      ? 'px-2.5 py-1 rounded-lg text-xs font-medium border border-fuchsia-600/40 bg-fuchsia-600/20 text-fuchsia-300 transition-all'
-      : 'px-2.5 py-1 rounded-lg text-xs font-medium border border-transparent bg-[#1e1e28] text-gray-500 hover:text-white transition-all';
+    const el = document.getElementById('R'+x.replace(':','_'));
+    el.className = x===r
+      ? 'px-2.5 py-1 rounded-lg text-xs font-medium border border-fuchsia-600/40 bg-fuchsia-600/20 text-fuchsia-300'
+      : 'px-2.5 py-1 rounded-lg text-xs font-medium border border-transparent bg-[#1e1e28] text-gray-500 hover:text-white';
   });
 }
 
 function toggleCustom() {
-  const el = document.getElementById('custom-model');
-  el.classList.toggle('hidden');
+  document.getElementById('custom-model').classList.toggle('hidden');
 }
 
-function hfHeaders() {
-  return {
-    'hf-api-key': HF_KEY,
-    'hf-secret':  HF_SEC,
-    'Authorization': `Key ${HF_KEY}:${HF_SEC}`,
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
+function hdrs() {
+  return {'hf-api-key':HF_KEY,'hf-secret':HF_SEC,'Authorization':`Key ${HF_KEY}:${HF_SEC}`,'Content-Type':'application/json','Accept':'application/json'};
 }
 
-function showStatus(msg, type) {
+function setStatus(msg, type) {
   const el = document.getElementById('job-status');
-  const colors = {
-    pending:   'bg-fuchsia-950/40 border-fuchsia-800/50 text-fuchsia-300',
-    done:      'bg-green-950/40 border-green-800/50 text-green-300',
-    failed:    'bg-red-950/40 border-red-800/50 text-red-300',
-  };
-  el.className = `flex items-center gap-3 rounded-lg border p-3 text-sm ${colors[type]||colors.pending}`;
+  el.className = 'flex items-center gap-3 rounded-lg border p-3 text-sm ' + (
+    type==='done'   ? 'bg-green-950/40 border-green-800/50 text-green-300' :
+    type==='failed' ? 'bg-red-950/40 border-red-800/50 text-red-300' :
+                      'bg-fuchsia-950/40 border-fuchsia-800/50 text-fuchsia-300');
   el.innerHTML = msg;
 }
 
-async function pollStatus(id) {
-  try {
-    const res = await fetch(`${BASE}/requests/${id}/status`, { headers: hfHeaders() });
-    const data = await res.json();
-    document.getElementById('job-raw').textContent = JSON.stringify(data, null, 2).slice(0, 400);
+function showMedia(data) {
+  const el = document.getElementById('job-media');
+  if (data.images?.length) {
+    el.innerHTML = data.images.map(img => {
+      const url = img.url||img;
+      return `<img src="${url}" class="w-full rounded-lg border border-[#2a2a38] mb-2"><a href="${url}" download target="_blank" class="inline-flex items-center gap-2 px-4 py-2 mb-3 rounded-lg bg-fuchsia-600/20 border border-fuchsia-600/40 text-fuchsia-300 text-sm">↓ Download</a>`;
+    }).join('');
+    return true;
+  }
+  if (data.video?.url) {
+    el.innerHTML = `<video src="${data.video.url}" controls class="w-full rounded-lg border border-[#2a2a38] mb-2"></video><a href="${data.video.url}" download target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-fuchsia-600/20 border border-fuchsia-600/40 text-fuchsia-300 text-sm">↓ Download</a>`;
+    return true;
+  }
+  return false;
+}
 
-    if (data.images?.length) {
-      clearInterval(pollTimer);
-      showStatus('✓ Completed', 'done');
-      const media = document.getElementById('job-media');
-      media.innerHTML = data.images.map(img =>
-        `<img src="${img.url||img}" class="w-full rounded-lg border border-[#2a2a38] mb-2">
-         <a href="${img.url||img}" download target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-fuchsia-600/20 border border-fuchsia-600/40 text-fuchsia-300 text-sm hover:bg-fuchsia-600/30">↓ Download</a>`
-      ).join('');
-      document.getElementById('generate-btn').disabled = false;
-      document.getElementById('btn-text').textContent = 'Generate';
-      return;
-    }
-    if (data.video?.url) {
-      clearInterval(pollTimer);
-      showStatus('✓ Completed', 'done');
-      document.getElementById('job-media').innerHTML =
-        `<video src="${data.video.url}" controls class="w-full rounded-lg border border-[#2a2a38] mb-2"></video>
-         <a href="${data.video.url}" download target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-fuchsia-600/20 border border-fuchsia-600/40 text-fuchsia-300 text-sm hover:bg-fuchsia-600/30">↓ Download</a>`;
-      document.getElementById('generate-btn').disabled = false;
-      document.getElementById('btn-text').textContent = 'Generate';
-      return;
-    }
-    if (data.status === 'failed' || data.status === 'nsfw' || data.status === 'cancelled') {
-      clearInterval(pollTimer);
-      showStatus(`✗ ${data.status}`, 'failed');
-      document.getElementById('generate-btn').disabled = false;
-      document.getElementById('btn-text').textContent = 'Generate';
-    } else {
-      showStatus(`⏳ ${data.status || 'processing'}… (polling every 4s)`, 'pending');
-    }
-  } catch(e) { /* keep polling */ }
+async function poll(id) {
+  try {
+    const r = await fetch(`${BASE}/requests/${id}/status`,{headers:hdrs()});
+    const d = await r.json();
+    document.getElementById('job-raw').textContent = JSON.stringify(d,null,2).slice(0,600);
+    if (showMedia(d)) { clearInterval(pollTimer); done(); return; }
+    if (['failed','nsfw','cancelled'].includes(d.status)) { clearInterval(pollTimer); setStatus('✗ '+d.status,'failed'); done(); return; }
+    setStatus('⏳ '+(d.status||'processing')+'...','pending');
+  } catch{}
+}
+
+function done() {
+  document.getElementById('gen-btn').disabled = false;
+  document.getElementById('btn-text').textContent = 'Generate';
 }
 
 async function generate() {
-  const customEl = document.getElementById('custom-model');
-  const model = (!customEl.classList.contains('hidden') && customEl.value.trim())
-    ? customEl.value.trim() : selectedModel;
+  const custom = document.getElementById('custom-model');
+  const model = (!custom.classList.contains('hidden') && custom.value.trim()) ? custom.value.trim() : selModel;
   const prompt = document.getElementById('prompt').value;
 
-  document.getElementById('output-empty').classList.add('hidden');
-  document.getElementById('output-error').classList.add('hidden');
-  document.getElementById('output-job').classList.remove('hidden');
+  document.getElementById('out-empty').classList.add('hidden');
+  document.getElementById('out-error').classList.add('hidden');
+  const jobEl = document.getElementById('out-job');
+  jobEl.classList.remove('hidden'); jobEl.classList.add('flex');
   document.getElementById('job-media').innerHTML = '';
   document.getElementById('job-raw').textContent = '';
-  document.getElementById('generate-btn').disabled = true;
-  document.getElementById('btn-text').textContent = 'Generating…';
-  showStatus('⏳ Starting generation…', 'pending');
+  document.getElementById('gen-btn').disabled = true;
+  document.getElementById('btn-text').textContent = 'Generating...';
+  setStatus('⏳ Sending request...','pending');
   if (pollTimer) clearInterval(pollTimer);
 
   try {
-    // Try new unified endpoint first
-    let res = await fetch(`${BASE}/${model}`, {
-      method: 'POST',
-      headers: hfHeaders(),
-      body: JSON.stringify({ prompt, aspect_ratio: selectedRatio }),
-    });
-
-    if (!res.ok) {
-      // Fallback to legacy endpoint
-      res = await fetch(`${BASE}/agents/jobs`, {
-        method: 'POST',
-        headers: hfHeaders(),
-        body: JSON.stringify({ job_set_type: model, prompt, aspect_ratio: selectedRatio }),
-      });
-    }
-
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`${res.status}: ${txt}`);
-    }
-
-    const data = await res.json();
-    document.getElementById('job-raw').textContent = JSON.stringify(data, null, 2).slice(0, 400);
-    const jobId = data.request_id || data.id;
-
-    if (data.images?.length || data.video?.url || data.result_url) {
-      showStatus('✓ Completed instantly', 'done');
-      document.getElementById('generate-btn').disabled = false;
-      document.getElementById('btn-text').textContent = 'Generate';
-    } else if (jobId) {
-      showStatus('⏳ Processing… (polling every 4s)', 'pending');
-      pollTimer = setInterval(() => pollStatus(jobId), 4000);
-    }
+    let res = await fetch(`${BASE}/${model}`,{method:'POST',headers:hdrs(),body:JSON.stringify({prompt,aspect_ratio:selRatio})});
+    if (!res.ok) res = await fetch(`${BASE}/agents/jobs`,{method:'POST',headers:hdrs(),body:JSON.stringify({job_set_type:model,prompt,aspect_ratio:selRatio})});
+    if (!res.ok) { const t=await res.text(); throw new Error(res.status+': '+t); }
+    const d = await res.json();
+    document.getElementById('job-raw').textContent = JSON.stringify(d,null,2).slice(0,600);
+    if (showMedia(d)) { setStatus('✓ Completed','done'); done(); return; }
+    const jobId = d.request_id||d.id;
+    if (jobId) { setStatus('⏳ Processing... (polling every 4s)','pending'); pollTimer = setInterval(()=>poll(jobId),4000); }
+    else { setStatus('✓ Queued','done'); done(); }
   } catch(e) {
-    document.getElementById('output-error').classList.remove('hidden');
-    document.getElementById('output-error').textContent = e.message;
-    document.getElementById('output-job').classList.add('hidden');
-    document.getElementById('generate-btn').disabled = false;
-    document.getElementById('btn-text').textContent = 'Generate';
+    document.getElementById('out-error').classList.remove('hidden');
+    document.getElementById('out-error').textContent = e.message;
+    jobEl.classList.add('hidden'); jobEl.classList.remove('flex');
+    done();
   }
 }
 </script>
