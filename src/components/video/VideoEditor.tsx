@@ -30,7 +30,7 @@ export default function VideoEditor() {
   const [panel,    setPanel]    = useState<Panel>(null);
   const [aiLoading,setAILoading]= useState(false);
   const [aiResult, setAIResult] = useState<string | null>(null);
-  const playerRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<HTMLVideoElement | null>(null);
 
   const activeClip = state.clips.find(c => c.id === state.activeClipId) ?? state.clips[0] ?? null;
 

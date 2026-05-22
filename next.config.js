@@ -1,8 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ['@anthropic-ai/sdk'],
-  },
+  serverExternalPackages: ['@anthropic-ai/sdk'],
+  turbopack: {},
   headers: async () => [
     {
       source: '/(.*)',
@@ -12,13 +11,6 @@ const nextConfig = {
       ],
     },
   ],
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'fs': false,
-    };
-    return config;
-  },
 };
 
 module.exports = nextConfig;

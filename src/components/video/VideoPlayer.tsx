@@ -25,7 +25,7 @@ interface VideoPlayerProps {
   onTimeUpdate?: (time: number) => void;
   onEnded?: () => void;
   onDurationChange?: (duration: number) => void;
-  playerRef?: RefObject<HTMLVideoElement>;
+  playerRef?: RefObject<HTMLVideoElement | null>;
   className?: string;
 }
 
