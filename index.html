@@ -283,7 +283,7 @@ async function generate() {
     if (m.type === 'image-old') {
       // Soul: POST /v1/text2image/soul
       const wh = Math.round(selRatio==='1:1'?'1024x1024':selRatio==='16:9'?'2048x1152':selRatio==='9:16'?'1152x2048':selRatio==='4:3'?'1365x1024':'1024x1365');
-      const whMap = {'1:1':'1024x1024','16:9':'2048x1152','9:16':'1152x2048','4:3':'1365x1024','3:4':'1024x1365'};
+      const whMap = {'1:1':'1536x1536','16:9':'2048x1152','9:16':'1152x2048','4:3':'2048x1536','3:4':'1536x2048'};
       const body = {params:{prompt,quality:'1080p',batch_size:1,width_and_height:whMap[selRatio]||'1024x1024'}};
       res = await fetch(`${BASE}/v1/text2image/soul`,{method:'POST',headers:hdrs(),body:JSON.stringify(body)});
       if (!res.ok) { const t=await res.text(); throw new Error(res.status+': '+t); }
