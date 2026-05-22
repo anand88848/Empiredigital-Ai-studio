@@ -5,7 +5,7 @@
       "args": ["-y", "higgsfield-mcp"],
       "env": {
         "HF_API_KEY": "key_6b0570d8f71f0982dcf36a57c5d51defa4cb7d43d29bd4d62b81c056f8dd966c6ddaf1a8f97c3690f0eace61f7dcd13a19c98dc983f8aea97250e7cc4f7188b2",
-        "HF_SECRET": ""
+        "HF_SECRET": "1e5aa2bd5f7cbe20642319d5eabb72d6c693725e8ac1fce95cebd6219683ad4d"
       }
     }
   }
