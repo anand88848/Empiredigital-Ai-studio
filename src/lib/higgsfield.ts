@@ -1,15 +1,15 @@
-const BASE_URL = process.env.HIGGSFIELD_API_URL ?? 'https://fnf.higgsfield.ai';
-
-function authHeader(): string {
-  const key = process.env.HIGGSFIELD_API_KEY ?? '';
-  if (!key) throw new Error('HIGGSFIELD_API_KEY is not set');
-  return `Bearer ${key}`;
-}
+const BASE_URL = 'https://platform.higgsfield.ai';
 
 function headers() {
+  const apiKey = process.env.HF_API_KEY ?? '';
+  const secret  = process.env.HF_SECRET  ?? '';
+  if (!apiKey || !secret) throw new Error('HF_API_KEY and HF_SECRET must be set');
   return {
-    'Authorization': authHeader(),
-    'Content-Type': 'application/json',
+    'hf-api-key':     apiKey,
+    'hf-secret':      secret,
+    'Authorization':  `Key ${apiKey}:${secret}`,
+    'Content-Type':   'application/json',
+    'Accept':         'application/json',
   };
 }
 
