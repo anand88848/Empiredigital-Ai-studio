@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import {
   Video, Music, Sparkles, Zap, Scissors, SlidersHorizontal,
-  Wand2, FileAudio, Film, ArrowRight,
+  Wand2, FileAudio, Film, ArrowRight, ImageIcon,
 } from 'lucide-react';
 
 const FEATURES = [
@@ -11,11 +11,13 @@ const FEATURES = [
   { icon: FileAudio,        title: 'Multi-Track Audio Mixer',   desc: 'Layer unlimited audio tracks with per-track volume, pan, and solo.' },
   { icon: SlidersHorizontal,title: '6-Band Equalizer',          desc: 'Boost or cut any frequency range with precision controls.' },
   { icon: Sparkles,         title: 'Claude AI Integration',     desc: 'Instant analysis, smart suggestions, auto-tagging & transcripts.' },
+  { icon: ImageIcon,        title: 'Higgsfield AI Generator',   desc: 'Generate ultra-realistic images & cinematic videos from a prompt.' },
 ];
 
 const QUICK_ACTIONS = [
-  { href: '/video-editor', icon: Video, label: 'Open Video Editor', color: 'from-blue-600 to-brand-600' },
-  { href: '/audio-editor', icon: Music, label: 'Open Audio Editor', color: 'from-purple-600 to-pink-600' },
+  { href: '/video-editor', icon: Video,     label: 'Open Video Editor', color: 'from-blue-600 to-brand-600' },
+  { href: '/audio-editor', icon: Music,     label: 'Open Audio Editor', color: 'from-purple-600 to-pink-600' },
+  { href: '/higgsfield',   icon: Sparkles,  label: 'AI Generator',      color: 'from-purple-700 to-fuchsia-600' },
 ];
 
 export default function Home() {
