@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import {
   Video, Music, Sparkles, Zap, Scissors, SlidersHorizontal,
-  Wand2, FileAudio, Film, ArrowRight,
+  Wand2, FileAudio, Film, ArrowRight, Clapperboard,
 } from 'lucide-react';
 
 const FEATURES = [
@@ -10,7 +10,8 @@ const FEATURES = [
   { icon: Wand2,            title: 'Effects & Colour Grade',    desc: '6 presets + full brightness, contrast, saturation, hue controls.' },
   { icon: FileAudio,        title: 'Multi-Track Audio Mixer',   desc: 'Layer unlimited audio tracks with per-track volume, pan, and solo.' },
   { icon: SlidersHorizontal,title: '6-Band Equalizer',          desc: 'Boost or cut any frequency range with precision controls.' },
-  { icon: Sparkles,         title: 'Claude AI Integration',     desc: 'Instant analysis, smart suggestions, auto-tagging & transcripts.' },
+  { icon: Sparkles,        title: 'Claude AI Integration',     desc: 'Instant analysis, smart suggestions, auto-tagging & transcripts.' },
+  { icon: Clapperboard,   title: 'Higgsfield AI Generation',  desc: 'Text-to-video, image-to-video, and AI effects powered by Higgsfield.' },
 ];
 
 const QUICK_ACTIONS = [

@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback } from 'react';
 import {
   Plus, Trash2, ZoomIn, ZoomOut, Download,
-  Sparkles, Layers, Settings2,
+  Sparkles, Layers, Settings2, Wand2,
 } from 'lucide-react';
 
 import Button from '@/components/ui/Button';
@@ -12,6 +12,7 @@ import VideoPlayer from './VideoPlayer';
 import VideoControls from './VideoControls';
 import VideoEffects from './VideoEffects';
 import VideoTimeline from './VideoTimeline';
+import HiggsfieldPanel from './HiggsfieldPanel';
 
 import type { VideoClip, VideoEditorState, VideoEffect, VideoAdjustments } from '@/types/video';
 import { DEFAULT_ADJUSTMENTS } from '@/types/video';
@@ -23,7 +24,7 @@ const INITIAL_STATE: VideoEditorState = {
   totalDuration: 0, isPlaying: false, zoom: 1, markers: [],
 };
 
-type Panel = 'effects' | 'clips' | null;
+type Panel = 'effects' | 'clips' | 'higgsfield' | null;
 
 export default function VideoEditor() {
   const [state,    setState]    = useState<VideoEditorState>(INITIAL_STATE);
@@ -84,6 +85,18 @@ export default function VideoEditor() {
     else                  { playerRef.current.play();  setState(s => ({ ...s, isPlaying: true  })); }
   }, [state.isPlaying]);
 
+  const addClipFromUrl = useCallback(async (url: string, name: string) => {
+    const startOnTimeline = state.clips.reduce((acc, c) => Math.max(acc, c.startOnTimeline + c.duration), 0);
+    const clip: VideoClip = {
+      id: generateId(), file: new File([], name), url, name,
+      duration: 0, trimRange: { start: 0, end: 0 },
+      effect: 'none' as VideoEffect, adjustments: { ...DEFAULT_ADJUSTMENTS },
+      overlays: [], transition: 'cut' as const,
+      volume: 100, muted: false, startOnTimeline,
+    };
+    setState(s => ({ ...s, clips: [...s.clips, clip], activeClipId: clip.id }));
+  }, [state.clips]);
+
   const analyseWithAI = useCallback(async () => {
     if (!activeClip) return;
     setAILoading(true); setAIResult(null);
@@ -126,6 +139,11 @@ export default function VideoEditor() {
           <Button variant="ghost" size="sm" icon={<Sparkles className="w-4 h-4 text-brand-400" />}
             onClick={analyseWithAI} loading={aiLoading}>
             AI Analyse
+          </Button>
+          <Button variant="ghost" size="sm"
+            icon={<Wand2 className="w-4 h-4 text-yellow-400" />}
+            onClick={() => setPanel(p => p === 'higgsfield' ? null : 'higgsfield')}>
+            Higgsfield
           </Button>
           <Button variant="ghost" size="sm"
             icon={<Settings2 className="w-4 h-4" />}
@@ -197,6 +215,15 @@ export default function VideoEditor() {
               onAdjustment={(key, val) =>
                 updateActiveClip({ adjustments: { ...activeClip.adjustments, [key]: val } as VideoAdjustments })
               }
+            />
+          </div>
+        )}
+
+        {panel === 'higgsfield' && (
+          <div className="w-72 shrink-0 rounded-xl border border-yellow-800/30 bg-surface-card p-4 flex flex-col overflow-y-auto">
+            <HiggsfieldPanel
+              activeVideoUrl={activeClip?.url}
+              onGenerated={addClipFromUrl}
             />
           </div>
         )}
