@@ -1,112 +1,119 @@
-import type {
-  HiggsfieldGenerationRequest,
-  HiggsfieldGeneration,
-  EffectDefinition,
-} from '@/types/higgsfield';
+import type { EffectDefinition } from '@/types/higgsfield';
 
-const BASE_URL = 'https://api.higgsfield.ai/v1';
+// Correct base URL from official higgsfield-ai/higgsfield-js SDK
+const BASE_URL = 'https://platform.higgsfield.ai';
 
-function getApiKey(): string {
+function getCredentials(): string {
   const key = process.env.HIGGSFIELD_API_KEY;
   if (!key) throw new Error('HIGGSFIELD_API_KEY environment variable is not set.');
   return key;
 }
 
+// Auth format: "Key KEY_ID:KEY_SECRET"
 function headers() {
   return {
-    'Authorization': `Bearer ${getApiKey()}`,
+    'Authorization': `Key ${getCredentials()}`,
     'Content-Type': 'application/json',
   };
 }
 
-export async function createGeneration(
-  request: HiggsfieldGenerationRequest,
-): Promise<HiggsfieldGeneration> {
-  const res = await fetch(`${BASE_URL}/video/generations`, {
+export interface HiggsfieldJob {
+  id: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  results?: { raw: { url: string } };
+  error?: string;
+  created_at?: string;
+}
+
+export interface ImageToVideoRequest {
+  model: 'dop-turbo' | 'dop';
+  prompt: string;
+  input_images: Array<{ type: 'image_url'; image_url: string }>;
+}
+
+export interface TextToImageRequest {
+  aspect_ratio: '1:1' | '16:9' | '9:16' | '4:3';
+  prompt: string;
+  safety_tolerance?: number;
+  seed?: number;
+}
+
+export async function createImageToVideo(request: ImageToVideoRequest): Promise<HiggsfieldJob> {
+  const res = await fetch(`${BASE_URL}/v1/image2video/dop`, {
     method: 'POST',
     headers: headers(),
-    body: JSON.stringify(request),
+    body: JSON.stringify({ input: request }),
   });
-
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Higgsfield API error ${res.status}: ${text}`);
+    throw new Error(`Higgsfield API ${res.status}: ${text}`);
   }
-
-  return res.json() as Promise<HiggsfieldGeneration>;
+  return res.json() as Promise<HiggsfieldJob>;
 }
 
-export async function getGeneration(id: string): Promise<HiggsfieldGeneration> {
-  const res = await fetch(`${BASE_URL}/video/generations/${id}`, {
+export async function createTextToImage(request: TextToImageRequest): Promise<HiggsfieldJob> {
+  const res = await fetch(`${BASE_URL}/flux-pro/kontext/max/text-to-image`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ input: request }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Higgsfield API ${res.status}: ${text}`);
+  }
+  return res.json() as Promise<HiggsfieldJob>;
+}
+
+export async function createSoulImage(request: TextToImageRequest): Promise<HiggsfieldJob> {
+  const res = await fetch(`${BASE_URL}/v1/text2image/soul`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ input: request }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Higgsfield API ${res.status}: ${text}`);
+  }
+  return res.json() as Promise<HiggsfieldJob>;
+}
+
+export async function getJob(id: string): Promise<HiggsfieldJob> {
+  const res = await fetch(`${BASE_URL}/jobs/${id}`, {
     headers: headers(),
   });
-
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Higgsfield API error ${res.status}: ${text}`);
+    throw new Error(`Higgsfield API ${res.status}: ${text}`);
   }
-
-  return res.json() as Promise<HiggsfieldGeneration>;
+  return res.json() as Promise<HiggsfieldJob>;
 }
+
+export type HiggsfieldEndpoint = 'image2video' | 'text2image' | 'soul';
 
 export const HIGGSFIELD_EFFECTS: EffectDefinition[] = [
   {
-    id: 'higgsfield/aurora',
-    label: 'Aurora',
-    category: 'text-to-video',
-    description: 'Generate stunning cinematic videos from a text prompt.',
-    supportsImage: false,
-    supportsText: true,
-  },
-  {
-    id: 'higgsfield/img2video',
-    label: 'Image to Video',
+    endpoint: 'image2video',
+    label: 'DoP — Image to Video',
     category: 'image-to-video',
-    description: 'Animate any still image into a dynamic video clip.',
+    description: 'Animate any still image into a cinematic video clip using the DoP model.',
     supportsImage: true,
     supportsText: true,
     badge: 'NEW',
   },
   {
-    id: 'higgsfield/video-enhance',
-    label: 'Video Enhance',
-    category: 'video-effects',
-    description: 'Upscale and enhance video quality with AI restoration.',
-    supportsImage: true,
-    supportsText: false,
-  },
-  {
-    id: 'higgsfield/angles',
-    label: 'Angles 2.0',
-    category: 'professional',
-    description: 'Generate any camera angle or view from a single image.',
-    supportsImage: true,
-    supportsText: true,
-    badge: 'PRO',
-  },
-  {
-    id: 'higgsfield/shots',
-    label: 'Shots',
-    category: 'professional',
-    description: '9 unique cinematic shots from one image in seconds.',
-    supportsImage: true,
-    supportsText: false,
-    badge: 'PRO',
-  },
-  {
-    id: 'higgsfield/expand',
-    label: 'Expand Image',
-    category: 'professional',
-    description: 'Extend any image beyond its borders using AI outpainting.',
-    supportsImage: true,
+    endpoint: 'text2image',
+    label: 'Flux Pro — Text to Image',
+    category: 'text-to-video',
+    description: 'Generate high-quality images from a text prompt using Flux Pro Kontext Max.',
+    supportsImage: false,
     supportsText: true,
   },
   {
-    id: 'higgsfield/virality',
-    label: 'Virality Predictor',
-    category: 'professional',
-    description: 'Predict how viral your video hook will be before you post.',
-    supportsImage: true,
+    endpoint: 'soul',
+    label: 'Soul — Styled Image',
+    category: 'text-to-video',
+    description: 'Create stylised artistic images from text with the Soul model.',
+    supportsImage: false,
     supportsText: true,
   },
 ];

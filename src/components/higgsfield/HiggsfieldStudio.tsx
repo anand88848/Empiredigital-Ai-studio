@@ -2,34 +2,29 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { clsx } from 'clsx';
-import { Wand2, Upload, Play, Loader2, CheckCircle, XCircle, Download, RefreshCw } from 'lucide-react';
+import { Wand2, Loader2, CheckCircle, XCircle, Download, RefreshCw } from 'lucide-react';
 import { HIGGSFIELD_EFFECTS } from '@/lib/higgsfield';
-import type { EffectDefinition, HiggsfieldGeneration, HiggsfieldModel } from '@/types/higgsfield';
+import type { HiggsfieldJob } from '@/lib/higgsfield';
+import type { EffectDefinition } from '@/types/higgsfield';
 import Button from '@/components/ui/Button';
 
 const CATEGORIES = [
-  { id: 'all',          label: 'All'          },
-  { id: 'text-to-video', label: 'Text to Video' },
+  { id: 'all',           label: 'All'           },
+  { id: 'text-to-video', label: 'Text to Image' },
   { id: 'image-to-video',label: 'Image to Video'},
-  { id: 'video-effects', label: 'Effects'       },
-  { id: 'professional',  label: 'Professional'  },
 ] as const;
 
 type CategoryId = typeof CATEGORIES[number]['id'];
 
-const RESOLUTIONS = ['480p', '720p', '1080p'] as const;
 const ASPECT_RATIOS = ['16:9', '9:16', '1:1', '4:3'] as const;
-const DURATIONS = [2, 4, 6, 8] as const;
 
 export default function HiggsfieldStudio() {
   const [category, setCategory]       = useState<CategoryId>('all');
   const [selected, setSelected]       = useState<EffectDefinition>(HIGGSFIELD_EFFECTS[0]);
   const [prompt, setPrompt]           = useState('');
   const [imageUrl, setImageUrl]       = useState('');
-  const [resolution, setResolution]   = useState<'480p' | '720p' | '1080p'>('720p');
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1' | '4:3'>('16:9');
-  const [duration, setDuration]       = useState<2 | 4 | 6 | 8>(4);
-  const [generation, setGeneration]   = useState<HiggsfieldGeneration | null>(null);
+  const [job, setJob]                 = useState<HiggsfieldJob | null>(null);
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState<string | null>(null);
   const pollRef                        = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -49,10 +44,10 @@ export default function HiggsfieldStudio() {
     pollRef.current = setInterval(async () => {
       try {
         const res = await fetch(`/api/higgsfield/status/${id}`);
-        const data = await res.json() as HiggsfieldGeneration & { error?: string };
+        const data = await res.json() as HiggsfieldJob & { error?: string };
         if (!res.ok) throw new Error(data.error ?? 'Status check failed');
 
-        setGeneration(data);
+        setJob(data);
 
         if (data.status === 'completed' || data.status === 'failed') {
           stopPolling();
@@ -67,14 +62,18 @@ export default function HiggsfieldStudio() {
   }, [stopPolling]);
 
   async function handleGenerate() {
-    if (!prompt.trim() && !imageUrl.trim()) {
-      setError('Please enter a prompt or image URL.');
+    if (selected.supportsText && !prompt.trim() && !imageUrl.trim()) {
+      setError('Please enter a prompt.');
+      return;
+    }
+    if (selected.supportsImage && selected.endpoint === 'image2video' && !imageUrl.trim()) {
+      setError('Please enter an image URL.');
       return;
     }
 
     stopPolling();
     setError(null);
-    setGeneration(null);
+    setJob(null);
     setLoading(true);
 
     try {
@@ -82,19 +81,17 @@ export default function HiggsfieldStudio() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: selected.id as HiggsfieldModel,
+          endpoint: selected.endpoint,
           prompt: prompt.trim() || undefined,
           image_url: imageUrl.trim() || undefined,
-          duration,
-          resolution,
           aspect_ratio: aspectRatio,
         }),
       });
 
-      const data = await res.json() as HiggsfieldGeneration & { error?: string };
+      const data = await res.json() as HiggsfieldJob & { error?: string };
       if (!res.ok) throw new Error(data.error ?? 'Generation failed');
 
-      setGeneration(data);
+      setJob(data);
 
       if (data.status !== 'completed' && data.status !== 'failed') {
         pollStatus(data.id);
@@ -109,16 +106,17 @@ export default function HiggsfieldStudio() {
 
   function handleReset() {
     stopPolling();
-    setGeneration(null);
+    setJob(null);
     setError(null);
     setLoading(false);
   }
+
+  const resultUrl = job?.results?.raw?.url;
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 min-h-0">
       {/* Left — effect picker */}
       <div className="lg:w-72 shrink-0 flex flex-col gap-4">
-        {/* Category filter */}
         <div className="flex gap-1.5 flex-wrap">
           {CATEGORIES.map(c => (
             <button
@@ -136,15 +134,14 @@ export default function HiggsfieldStudio() {
           ))}
         </div>
 
-        {/* Effect cards */}
         <div className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-22rem)]">
           {filtered.map(effect => (
             <button
-              key={effect.id}
+              key={effect.endpoint}
               onClick={() => { setSelected(effect); setError(null); }}
               className={clsx(
                 'text-left rounded-xl border p-3 transition-all',
-                selected.id === effect.id
+                selected.endpoint === effect.endpoint
                   ? 'border-higgsfield-600 bg-higgsfield-950/60'
                   : 'border-surface-border bg-surface-card hover:border-higgsfield-700/50',
               )}
@@ -153,7 +150,7 @@ export default function HiggsfieldStudio() {
                 <span className="text-sm font-semibold text-white">{effect.label}</span>
                 {effect.badge && (
                   <span className={clsx(
-                    'text-[10px] font-bold px-1.5 py-0.5 rounded',
+                    'text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0',
                     effect.badge === 'NEW' ? 'bg-green-900/60 text-green-400' : 'bg-amber-900/60 text-amber-400',
                   )}>
                     {effect.badge}
@@ -177,7 +174,6 @@ export default function HiggsfieldStudio() {
           <p className="text-xs text-gray-500 mb-4">{selected.description}</p>
 
           <div className="flex flex-col gap-4">
-            {/* Prompt */}
             {selected.supportsText && (
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Prompt</label>
@@ -185,19 +181,16 @@ export default function HiggsfieldStudio() {
                   rows={3}
                   value={prompt}
                   onChange={e => setPrompt(e.target.value)}
-                  placeholder="Describe the video you want to generate…"
+                  placeholder="Describe what you want to generate…"
                   className="w-full rounded-lg bg-surface-muted border border-surface-border text-sm text-white placeholder-gray-600 px-3 py-2 focus:outline-none focus:border-higgsfield-600 resize-none"
                 />
               </div>
             )}
 
-            {/* Image URL */}
             {selected.supportsImage && (
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">
-                  <Upload className="inline w-3.5 h-3.5 mr-1" />
-                  Image URL
-                  {!selected.supportsText && <span className="text-red-400 ml-1">*</span>}
+                  Image URL{selected.endpoint === 'image2video' && <span className="text-red-400 ml-1">*</span>}
                 </label>
                 <input
                   type="url"
@@ -209,38 +202,15 @@ export default function HiggsfieldStudio() {
               </div>
             )}
 
-            {/* Settings row */}
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Resolution</label>
-                <select
-                  value={resolution}
-                  onChange={e => setResolution(e.target.value as typeof resolution)}
-                  className="w-full rounded-lg bg-surface-muted border border-surface-border text-sm text-white px-2 py-1.5 focus:outline-none focus:border-higgsfield-600"
-                >
-                  {RESOLUTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Aspect Ratio</label>
-                <select
-                  value={aspectRatio}
-                  onChange={e => setAspectRatio(e.target.value as typeof aspectRatio)}
-                  className="w-full rounded-lg bg-surface-muted border border-surface-border text-sm text-white px-2 py-1.5 focus:outline-none focus:border-higgsfield-600"
-                >
-                  {ASPECT_RATIOS.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Duration (s)</label>
-                <select
-                  value={duration}
-                  onChange={e => setDuration(Number(e.target.value) as typeof duration)}
-                  className="w-full rounded-lg bg-surface-muted border border-surface-border text-sm text-white px-2 py-1.5 focus:outline-none focus:border-higgsfield-600"
-                >
-                  {DURATIONS.map(d => <option key={d} value={d}>{d}s</option>)}
-                </select>
-              </div>
+            <div className="w-40">
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Aspect Ratio</label>
+              <select
+                value={aspectRatio}
+                onChange={e => setAspectRatio(e.target.value as typeof aspectRatio)}
+                className="w-full rounded-lg bg-surface-muted border border-surface-border text-sm text-white px-2 py-1.5 focus:outline-none focus:border-higgsfield-600"
+              >
+                {ASPECT_RATIOS.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
             </div>
 
             {error && (
@@ -261,8 +231,7 @@ export default function HiggsfieldStudio() {
           </div>
         </div>
 
-        {/* Result panel */}
-        {generation && (
+        {job && (
           <div className="rounded-xl border border-surface-border bg-surface-card p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-white">Result</h3>
@@ -271,35 +240,36 @@ export default function HiggsfieldStudio() {
               </button>
             </div>
 
-            <StatusBadge status={generation.status} />
+            <StatusBadge status={job.status} />
 
-            {generation.status === 'processing' || generation.status === 'pending' ? (
+            {(job.status === 'processing' || job.status === 'pending') && (
               <div className="mt-4 flex items-center gap-2 text-xs text-gray-400">
                 <Loader2 className="w-4 h-4 animate-spin text-higgsfield-400" />
-                Processing your generation — this typically takes 30–90 seconds…
+                Processing — this typically takes 20–60 seconds…
               </div>
-            ) : generation.status === 'completed' && generation.video_url ? (
+            )}
+
+            {job.status === 'completed' && resultUrl && (
               <div className="mt-4 space-y-3">
-                <video
-                  src={generation.video_url}
-                  controls
-                  className="w-full rounded-lg border border-surface-border"
-                  style={{ maxHeight: 360 }}
-                />
-                <a
-                  href={generation.video_url}
-                  download
-                  className="inline-flex items-center gap-2 text-xs text-higgsfield-400 hover:text-higgsfield-300"
-                >
+                {selected.endpoint === 'image2video' ? (
+                  <video src={resultUrl} controls className="w-full rounded-lg border border-surface-border" style={{ maxHeight: 360 }} />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={resultUrl} alt="Generated result" className="w-full rounded-lg border border-surface-border object-contain max-h-96" />
+                )}
+                <a href={resultUrl} download target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-xs text-higgsfield-400 hover:text-higgsfield-300">
                   <Download className="w-3.5 h-3.5" />
-                  Download video
+                  Download
                 </a>
               </div>
-            ) : generation.status === 'failed' ? (
-              <p className="mt-3 text-xs text-red-400">{generation.error ?? 'Generation failed. Please try again.'}</p>
-            ) : null}
+            )}
 
-            <p className="mt-3 text-[10px] text-gray-600 font-mono">ID: {generation.id}</p>
+            {job.status === 'failed' && (
+              <p className="mt-3 text-xs text-red-400">{job.error ?? 'Generation failed. Please try again.'}</p>
+            )}
+
+            <p className="mt-3 text-[10px] text-gray-600 font-mono">Job ID: {job.id}</p>
           </div>
         )}
       </div>
