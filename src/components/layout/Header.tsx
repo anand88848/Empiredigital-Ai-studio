@@ -2,14 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Zap, Video, Music, LayoutDashboard, Menu, X } from 'lucide-react';
+import { Zap, Video, Music, LayoutDashboard, Menu, X, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { clsx } from 'clsx';
 
 const NAV = [
-  { href: '/',              label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/video-editor',  label: 'Video',     icon: Video  },
-  { href: '/audio-editor',  label: 'Audio',     icon: Music  },
+  { href: '/',             label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/video-editor', label: 'Video',     icon: Video           },
+  { href: '/audio-editor', label: 'Audio',     icon: Music           },
+  { href: '/higgsfield',   label: 'Higgsfield', icon: Sparkles       },
 ];
 
 export default function Header() {
