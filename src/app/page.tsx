@@ -11,11 +11,13 @@ const FEATURES = [
   { icon: FileAudio,        title: 'Multi-Track Audio Mixer',   desc: 'Layer unlimited audio tracks with per-track volume, pan, and solo.' },
   { icon: SlidersHorizontal,title: '6-Band Equalizer',          desc: 'Boost or cut any frequency range with precision controls.' },
   { icon: Sparkles,         title: 'Claude AI Integration',     desc: 'Instant analysis, smart suggestions, auto-tagging & transcripts.' },
+  { icon: Film,             title: 'Higgsfield Video Gen',      desc: 'Generate cinematic AI video clips from text prompts, refined by Claude.' },
 ];
 
 const QUICK_ACTIONS = [
-  { href: '/video-editor', icon: Video, label: 'Open Video Editor', color: 'from-blue-600 to-brand-600' },
-  { href: '/audio-editor', icon: Music, label: 'Open Audio Editor', color: 'from-purple-600 to-pink-600' },
+  { href: '/video-editor',   icon: Video, label: 'Open Video Editor',   color: 'from-blue-600 to-brand-600' },
+  { href: '/audio-editor',   icon: Music, label: 'Open Audio Editor',   color: 'from-purple-600 to-pink-600' },
+  { href: '/video-generate', icon: Film,  label: 'Generate Video (AI)', color: 'from-pink-600 to-orange-500' },
 ];
 
 export default function Home() {
@@ -83,7 +85,8 @@ export default function Home() {
           with your AI co-editor — all without leaving the studio.
         </p>
         <p className="text-xs text-gray-600">
-          Set <code className="bg-surface-muted px-1.5 py-0.5 rounded text-brand-400">ANTHROPIC_API_KEY</code> in{' '}
+          Set <code className="bg-surface-muted px-1.5 py-0.5 rounded text-brand-400">ANTHROPIC_API_KEY</code> and{' '}
+          <code className="bg-surface-muted px-1.5 py-0.5 rounded text-brand-400">HIGGSFIELD_API_KEY</code> in{' '}
           <code className="bg-surface-muted px-1.5 py-0.5 rounded text-gray-300">.env.local</code> to activate AI features.
         </p>
       </section>
